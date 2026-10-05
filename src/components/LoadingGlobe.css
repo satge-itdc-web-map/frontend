@@ -1,0 +1,83 @@
+.radar-loader-fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100%;
+  background: #f8fafc;
+}
+
+.radar-loader-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.radar-loader-scene {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-grid-bg {
+  position: absolute;
+  border-radius: 50%;
+  background-image:
+    linear-gradient(rgba(109, 190, 69, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(109, 190, 69, 0.08) 1px, transparent 1px);
+  background-size: 14px 14px;
+  overflow: hidden;
+}
+
+@keyframes radarSweepSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.radar-sweep {
+  position: absolute;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(109, 190, 69, 0.35), transparent 35%);
+  animation: radarSweepSpin 2.4s linear infinite;
+}
+
+@keyframes radarRingExpand {
+  0% { width: 16px; height: 16px; opacity: 0.9; border-color: #6DBE45; }
+  60% { border-color: #a8e063; }
+  100% { width: 140px; height: 140px; opacity: 0; border-color: #a8e063; }
+}
+.radar-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid #6DBE45;
+  animation: radarRingExpand 2.4s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+}
+
+@keyframes radarHaloPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.15); }
+}
+.radar-pin-halo {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(109, 190, 69, 0.4) 0%, transparent 70%);
+  animation: radarHaloPulse 1.6s ease-in-out infinite;
+  z-index: 2;
+}
+
+.radar-pin-icon {
+  font-size: 28px;
+  color: #4a9e2e;
+  position: relative;
+  z-index: 3;
+}
+
+.radar-loader-text {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+  margin: 0;
+}
