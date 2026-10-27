@@ -28,7 +28,7 @@ function TableauDeBord({ onNavigate }) {
   const navigate = useNavigate();
   const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tauxCouverture, setTauxCouverture] = useState(0);  // ← vrai taux
+  const [tauxCouverture, setTauxCouverture] = useState(null);// ← vrai taux
 
   useEffect(() => {
     // 1. Charger les établissements
@@ -39,14 +39,29 @@ function TableauDeBord({ onNavigate }) {
 
     // 2. Calculer le VRAI taux de couverture depuis /zones/classement
     api.get('/zones/classement')
-      .then((res) => {
-        const rows = res.data?.data || [];
-        const totalPop = rows.reduce((sum, r) => sum + (r.totalPopulation || 0), 0);
-        const coveredPop = rows.reduce((sum, r) => sum + (r.coveredPopulation || 0), 0);
-        const taux = totalPop > 0 ? Math.round((coveredPop / totalPop) * 100) : 0;
-        setTauxCouverture(taux);
-      })
-      .catch((err) => console.error('Erreur taux couverture:', err));
+  .then((res) => {
+    const rows = res.data?.data || [];
+
+    const totalPop = rows.reduce(
+      (sum, r) => sum + (Number(r.totalPopulation) || 0),
+      0
+    );
+
+    const coveredPop = rows.reduce(
+      (sum, r) => sum + (Number(r.coveredPopulation) || 0),
+      0
+    );
+
+    setTauxCouverture(
+      totalPop > 0
+        ? Math.round((coveredPop / totalPop) * 100)
+        : null
+    );
+  })
+  .catch((err) => {
+    console.error('Erreur taux couverture:', err);
+    setTauxCouverture(null);
+  });
   }, []);
 
   // Stats calculées
@@ -65,7 +80,7 @@ function TableauDeBord({ onNavigate }) {
     { annee: '2022', taux: 55 },
     { annee: '2023', taux: 61 },
     { annee: '2024', taux: 68 },
-    { annee: '2025', taux: tauxCouverture || 0 },
+    { annee: '2025', taux: tauxCouverture },
   ];
 
   // Données donut
@@ -299,7 +314,9 @@ function TableauDeBord({ onNavigate }) {
         <div style={styles.kpiGrid}>
           {[
             { label: 'Établissements', value: totalFS, icon: 'bi-hospital-fill', color: '#6DBE45', bg: 'rgba(109,190,69,0.1)', sub: 'formations sanitaires' },
-            { label: "Taux d'accessibilité", value: `${tauxCouverture}%`, icon: 'bi-graph-up-arrow', color: '#2980b9', bg: 'rgba(41,128,185,0.1)', sub: 'population couverte' },
+            { label: "Taux d'accessibilité", value: tauxCouverture === null
+  ? 'Indisponible'
+  : `${tauxCouverture}%`, icon: 'bi-graph-up-arrow', color: '#2980b9', bg: 'rgba(41,128,185,0.1)', sub: 'population couverte' },
             { label: 'Régions couvertes', value: regions.length, icon: 'bi-map-fill', color: '#9b59b6', bg: 'rgba(155,89,182,0.1)', sub: 'sur 23 régions' },
           ].map(kpi => (
             <div key={kpi.label} style={styles.kpiCard}>

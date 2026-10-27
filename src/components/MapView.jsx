@@ -272,7 +272,35 @@ function MapView({ flyTo, onSelectFacility, onSelectRegion, onRoute, destination
         </div>
       )}
 
-      <MarkerClusterGroup chunkedLoading maxClusterRadius={60}>
+      <MarkerClusterGroup
+  chunkedLoading
+  maxClusterRadius={60}
+  iconCreateFunction={(cluster) => {
+    const count = cluster.getChildCount();
+
+    return L.divIcon({
+      html: `
+        <div style="
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: #2980b9;
+          border: 4px solid #b9def4;
+          color: white;
+          font-weight: 700;
+          font-size: 13px;
+          box-sizing: border-box;
+        ">${count}</div>
+      `,
+      className: '',
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+    });
+  }}
+>
         {(facilities || []).map((feature, index) => {
         const [lon, lat] = feature.geometry.coordinates;
         const props = feature.properties;

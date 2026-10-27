@@ -7,16 +7,14 @@ const api = axios.create({
 
 // Intercepteur pour ajouter le token JWT à chaque requête
 api.interceptors.request.use(
-  (config) => {
+  (req) => {
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      req.headers.Authorization = `Bearer ${token}`;
     }
-    return config;
+    return req;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Intercepteur pour gérer les erreurs 401 globalement (token expiré / invalide)
@@ -26,7 +24,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const hadToken = localStorage.getItem('token');
       if (hadToken) {
-        // Token expiré → déconnexion automatique et redirection vers la page de login
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
@@ -37,14 +34,14 @@ api.interceptors.response.use(
 );
 
 export const authService = {
- register: async (email, password, role, username) => {
-  const response = await api.post('/auth/register', { email, password, role, username });
-  if (response.data.access_token) {
-    localStorage.setItem('token', response.data.access_token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
-  }
-  return response.data;
-},
+  register: async (email, password, role, username) => {
+    const response = await api.post('/auth/register', { email, password, role, username });
+    if (response.data.access_token) {
+      localStorage.setItem('token', response.data.access_token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    return response.data;
+  },
 
   login: async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
@@ -65,9 +62,7 @@ export const authService = {
     return user ? JSON.parse(user) : null;
   },
 
-  isAuthenticated: () => {
-    return !!localStorage.getItem('token');
-  },
+  isAuthenticated: () => !!localStorage.getItem('token'),
 
   isAdmin: () => {
     const user = authService.getCurrentUser();
