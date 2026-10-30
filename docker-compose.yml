@@ -1,0 +1,30 @@
+# ============================================================
+# WEB MAP - FRONTEND
+# nginx hôte (HTTPS) -> 127.0.0.1:3032 -> ce conteneur (nginx)
+#   /     -> React
+#   /api/ -> nestjs_backend:4000 (réseau app-network)
+# ============================================================
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: /api
+    image: web-map-frontend:latest
+    container_name: web_map_frontend
+    restart: always
+    ports:
+      - "127.0.0.1:3032:80"
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://127.0.0.1/healthz" ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+networks:
+  app-network:
+    external: true
+    name: app-network
