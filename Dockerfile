@@ -9,17 +9,22 @@ COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --legacy-peer-deps --no-audit --no-fund --prefer-offline
 
-COPY . .
+# On ne copie QUE ce qui compose l'app : modifier nginx.conf, Jenkinsfile, README...
+COPY public ./public
+COPY src ./src
+COPY tailwind.config.js postcss.config.js ./
 
-# En production l'API est appelée en chemin relatif : /api -> proxy nginx -> backend:4000
+# En production l'API est appelée en chemin relatif : /api -> proxy nginx -> backend
 ARG REACT_APP_API_URL=/api
 ENV REACT_APP_API_URL=$REACT_APP_API_URL \
     GENERATE_SOURCEMAP=false \
     DISABLE_ESLINT_PLUGIN=true \
-    NODE_OPTIONS=--max-old-space-size=1536 \
+    NODE_OPTIONS=--max-old-space-size=2048 \
     CI=false
 
-RUN npm run build
+# Cache webpack/babel conservé entre les builds : les builds suivants sont incrémentaux
+RUN --mount=type=cache,target=/app/node_modules/.cache \
+    npm run build
 
 # ============================================================
 # Étape 2 : nginx qui sert le build + proxy /api

@@ -4,7 +4,9 @@ pipeline {
     options {
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
-        timeout(time: 60, unit: 'MINUTES')
+        timeout(time: 45, unit: 'MINUTES')
+        // Le stage 'Checkout' ci-dessous fait déjà le checkout : on évite de le faire 2 fois
+        skipDefaultCheckout(true)
     }
 
     triggers {
@@ -16,6 +18,9 @@ pipeline {
 
     environment {
         NETWORK_NAME             = 'app-network'
+
+        // Indispensable pour les caches du Dockerfile (npm + webpack)
+        DOCKER_BUILDKIT          = '1'
 
         FRONTEND_CONTAINER_NAME  = 'web_map_frontend'
         FRONTEND_IMAGE           = 'web-map-frontend'
@@ -110,11 +115,14 @@ pipeline {
         stage('Nettoyage images') {
             steps {
                 sh '''
-                    # Garde latest + les 3 derniers builds, supprime le reste
+                    # Supprime uniquement les anciennes images taguées (garde latest + 3 derniers builds)
                     docker images ${FRONTEND_IMAGE} --format '{{.Tag}}' \
                         | grep -E '^[0-9]+$' | sort -rn | tail -n +4 \
                         | xargs -r -I{} docker rmi ${FRONTEND_IMAGE}:{} || true
-                    docker image prune -f || true
+
+                    # NE PAS faire 'docker image prune' ni 'docker builder prune' complet :
+                    # on garde le cache de build (npm + webpack). On ne purge que le cache de plus de 7 jours.
+                    docker builder prune -f --filter "until=168h" || true
                 '''
             }
         }
