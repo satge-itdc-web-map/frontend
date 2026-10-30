@@ -5,7 +5,9 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+# Cache npm entre les builds (BuildKit) + options qui accélèrent l'installation
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --legacy-peer-deps --no-audit --no-fund --prefer-offline
 
 COPY . .
 
@@ -13,6 +15,8 @@ COPY . .
 ARG REACT_APP_API_URL=/api
 ENV REACT_APP_API_URL=$REACT_APP_API_URL \
     GENERATE_SOURCEMAP=false \
+    DISABLE_ESLINT_PLUGIN=true \
+    NODE_OPTIONS=--max-old-space-size=1536 \
     CI=false
 
 RUN npm run build
