@@ -465,3 +465,24 @@
 .leaflet-interactive:focus {
   outline: none;
 }
+/* Boutons des sites recommandés pour les régions critiques */
+.carte-recommendation-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 6px 0;
+  padding: 10px 12px;
+  border: 1px solid #f1c9a2;
+  border-radius: 8px;
+  background: #fff8ef;
+  color: #7c3b08;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.carte-recommendation-button:hover,
+.carte-recommendation-button:focus-visible {
+  background: #ffedd5;
+  outline: 2px solid #e67e22;
+  outline-offset: 1px;
+}

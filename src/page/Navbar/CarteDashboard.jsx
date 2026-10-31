@@ -1,5 +1,5 @@
 // CarteDashboard.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import MapView from '../../components/MapView';
 import FacilityDetailPanel from '../../components/FacilityDetailPanel';
 import MiniMapSite from '../../components/MiniMapSite';
@@ -26,6 +26,8 @@ function CarteDashboard({ facilities, isVisible = true }) {
   const [recommandations, setRecommandations] = useState([]);
   const [selectedRecommandation, setSelectedRecommandation] = useState(null);
     const [loadingRecommandations, setLoadingRecommandations] = useState(false);
+    const [erreurRecommandations, setErreurRecommandations] = useState(false);
+const requeteRecommandations = useRef(0);
   const [confirmReco, setConfirmReco] = useState(null);
   const [skipConfirm, setSkipConfirm] = useState(() => localStorage.getItem('reco-confirm-skip') === '1');
 
@@ -84,6 +86,10 @@ function CarteDashboard({ facilities, isVisible = true }) {
   };
 
   const handleFacilityClick = (feature) => {
+    requeteRecommandations.current += 1;
+setRecommandations([]);
+setLoadingRecommandations(false);
+setErreurRecommandations(false);
     setSelectedFacility(feature);
     setSelectedRegion(null);
     setSelectedRecommandation(null);
@@ -93,31 +99,61 @@ function CarteDashboard({ facilities, isVisible = true }) {
   };
 
   const handleRegionClick = async (regionProperties) => {
-    setSelectedRegion(regionProperties);
-    setSelectedFacility(null);
-    setSelectedRecommandation(null);
-    setIsPanelOpen(true);
+  // Identifiant permettant d'ignorer les anciennes réponses.
+  const requeteId = ++requeteRecommandations.current;
 
-    const regionName = regionProperties.region || regionProperties.name;
-    if (!regionName) {
-      setRecommandations([]);
-      return;
+  setSelectedRegion(regionProperties);
+  setSelectedFacility(null);
+  setSelectedRecommandation(null);
+  setRecommandations([]);
+  setErreurRecommandations(false);
+  setLoadingRecommandations(false);
+  setIsPanelOpen(true);
+
+  const regionName =
+    regionProperties.region || regionProperties.name;
+
+  // Les recommandations sont réservées aux régions critiques.
+  if (!regionName || regionProperties.statut !== 'Critique') {
+    return;
+  }
+
+  setLoadingRecommandations(true);
+
+  try {
+    const res = await api.get('/recommandations/implantation', {
+      params: {
+        region: regionName,
+        k: 3,
+      },
+    });
+
+    // Afficher la réponse seulement si la région n'a pas changé.
+    if (requeteId === requeteRecommandations.current) {
+      setRecommandations(
+        Array.isArray(res.data) ? res.data : []
+      );
     }
-    setLoadingRecommandations(true);
-    try {
-      const res = await api.get('/recommandations/implantation', {
-        params: { region: regionName, k: 3 },
-      });
-      setRecommandations(res.data);
-    } catch (err) {
-      console.error('Erreur recommandations implantation:', err);
-      setRecommandations([]);
-    } finally {
+  } catch (err) {
+    if (requeteId === requeteRecommandations.current) {
+      console.error(
+        'Erreur recommandations implantation :',
+        err
+      );
+      setErreurRecommandations(true);
+    }
+  } finally {
+    if (requeteId === requeteRecommandations.current) {
       setLoadingRecommandations(false);
     }
-  };
+  }
+};
+    
 
   const handleClosePanel = () => {
+    requeteRecommandations.current += 1;
+setLoadingRecommandations(false);
+setErreurRecommandations(false);
     setSelectedFacility(null);
     setSelectedRegion(null);
     setSelectedRecommandation(null);
@@ -624,25 +660,62 @@ function CarteDashboard({ facilities, isVisible = true }) {
                   </div>
                 </div>
 
-                {loadingRecommandations && (
-                  <div className="carte-panel-section" style={{ textAlign: 'center', padding: '16px 0' }}>
-                    <div className="mini-spinner" />
-                    <p style={{ fontSize: '12px', color: '#7f8c8d', marginTop: '8px' }}>
-                      Calcul des sites recommandés...
-                    </p>
-                  </div>
-                )}
-                {!loadingRecommandations && recommandations.length > 0 && (
-                  <div className="carte-panel-section">
-                    <h4 className="carte-panel-section-title">
-                      <i className="bi bi-stars"></i> Sites recommandés ({recommandations.length})
-                    </h4>
-                    <p style={{ fontSize: '12px', color: '#7f8c8d', margin: '0 0 8px' }}>
-                      Cliquez sur <i className="bi bi-cone-striped" style={{ color: '#E67E22' }}></i> sur la carte pour voir le détail de chaque site.
-                    </p>
-                  </div>
-                )}
-              </div>
+                {selectedRegion.statut === 'Critique' && (
+  <div className="carte-panel-section" aria-live="polite">
+    <h4 className="carte-panel-section-title">
+      <i className="bi bi-stars"></i> Sites recommandés
+    </h4>
+
+    {loadingRecommandations ? (
+      <p style={{ fontSize: '12px', color: '#7f8c8d' }}>
+        Calcul des sites recommandés...
+      </p>
+    ) : erreurRecommandations ? (
+      <p style={{ fontSize: '12px', color: '#b42318' }}>
+        Impossible de charger les recommandations.
+        Sélectionnez à nouveau la région pour réessayer.
+      </p>
+    ) : recommandations.length === 0 ? (
+      <p style={{ fontSize: '12px', color: '#7f8c8d' }}>
+        Aucun site proposé avec les données disponibles.
+      </p>
+    ) : (
+      <>
+        <p
+          style={{
+            fontSize: '12px',
+            color: '#7f8c8d',
+            margin: '0 0 8px',
+          }}
+        >
+          Propositions pour améliorer l'accès aux soins,
+          à vérifier sur le terrain. Sélectionnez un site
+          ci-dessous ou sur la carte.
+        </p>
+
+        {recommandations.map((rec) => (
+          <button
+            key={rec.id}
+            type="button"
+            className="carte-recommendation-button"
+            onClick={() => handleVoirDetailRecommandation(rec)}
+          >
+            <i
+              className="bi bi-geo-alt-fill"
+              aria-hidden="true"
+            ></i>{' '}
+            Site n°{rec.id} —{' '}
+            {rec.quartier ||
+              rec.communePlusProche ||
+              rec.district ||
+              'Localisation à vérifier'}
+          </button>
+        ))}
+      </>
+    )}
+  </div>
+)}
+</div>
             )}
           </div>
         </div>
